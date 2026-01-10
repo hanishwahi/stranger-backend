@@ -5,6 +5,7 @@ const { UserProfile, TrendingUsers, ExploreUsers } = require('../controllers/pro
 const authMiddleware = require('../middlewares/authMiddlware');
 const { addCredits } = require('../controllers/credits/credits');
 const { followUser, unfollowUser } = require('../controllers/profile/hookController');
+const { getSpotlightStarUsers } = require('../controllers/spotlightStars');
 
 console.log({
     signupController,
@@ -22,8 +23,6 @@ userRouter.post('/credits/add', authMiddleware, addCredits);
 
 userRouter.post('/follow/:id', authMiddleware, followUser);
 userRouter.post('/unfollow/:id', authMiddleware, unfollowUser);
-
-
-
+userRouter.get('/spotlightStars', authMiddleware, getSpotlightStarUsers);
 
 module.exports = userRouter;
