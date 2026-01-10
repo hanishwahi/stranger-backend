@@ -38,13 +38,15 @@ exports.deletePostById = async (req, res) => {
 
         // Find the post
         const post = await Post.findById(postId);
+        console.log("posst", post);
+
 
         if (!post) {
             return res.status(404).json({ message: "Post not found" });
         }
 
         // Check if current user is the author
-        if (post.userId.toString() !== currentUserId) {
+        if (post.userId.toString() != currentUserId) {
             return res.status(403).json({ message: "You are not authorized to delete this post" });
         }
 
@@ -130,13 +132,49 @@ exports.getPostsByUserId = async (req, res) => {
 // all stranger posts 
 exports.getAllUsersPosts = async (req, res) => {
     try {
+        const currentUserId = req.user.id
+
+        // 1️⃣ Get current user's following list
+        const currentUser = await User.findById(currentUserId)
+            .select("following")
+            .lean();
+
+        const followingIds = currentUser.following.map(id => id.toString());
+
         // Fetch all posts without filtering by logged-in user
-        const posts = await Post.find() // no user filter
-            .populate('userId', 'username profile_img') // populate post author info
+        const posts = await Post.find({
+            userId: {
+                $nin: [...followingIds, currentUserId],
+            },
+        })
+            .populate({
+                path: "userId",
+                select: "username profile_img profileType",
+                match: { profileType: "public" }, // ✅ ONLY public users
+            }) // populate post author info
             .populate('comments.userId', 'username profile_img') // populate comment author info
             .sort({ createdAt: -1 }); // latest posts first
 
-        res.status(200).json({ status: true, data: posts });
+        // ❗ remove posts whose userId didn't match (private profiles)
+        const filteredPosts = posts.filter(post => post.userId);
+
+        const finalData = filteredPosts.map((item) => {
+            const post = item.toObject();
+            const authorId = post.userId?._id?.toString();
+
+            return {
+                ...post,
+                user: post.userId,
+                userId: undefined,
+                hasLiked: post.likes.some((likeId) => {
+                    return likeId.toString() == currentUserId;
+                }),
+                hasFollowed: followingIds.includes(authorId), // ✅ added
+
+            };
+        });
+
+        res.status(200).json({ status: true, data: finalData });
     } catch (error) {
         console.error('Get all posts error:', error);
         res.status(500).json({ message: 'Server error' });
@@ -149,23 +187,43 @@ exports.getFeedFriendsPosts = async (req, res) => {
         const loggedInUser = await getDetailsFromToken(req);
         const currentUserId = loggedInUser.id;
 
-        console.log("currentUserId", currentUserId);
         // Get current user's following list
         const currentUser = await User.findById(currentUserId);
         if (!currentUser) {
             return res.status(404).json({ message: "User not found" });
         }
 
-        const followingIds = currentUser.following; // array of user IDs
+        // ✅ include self
+        const feedUserIds = [
+            ...currentUser.following.map(id => id.toString()),
+            currentUserId,
+        ];
+
 
 
         // Fetch posts only from following users
-        const posts = await Post.find({ userId: { $in: followingIds } })
+        const posts = await Post.find({ userId: { $in: feedUserIds } })
             .populate('userId', 'username profile_img') // populate post author info
             .populate('comments.userId', 'username profile_img') // populate comment author info
             .sort({ createdAt: -1 }); // latest first
 
-        res.status(200).json({ status: true, data: posts });
+        const finalData = posts.map((item) => {
+            const post = item.toObject();
+
+            return {
+                ...post,
+                user: post.userId,
+                userId: undefined,
+
+                hasLiked: post.likes.some(
+                    (likeId) => likeId.toString() === currentUserId
+                ),
+
+                // ✅ always true for friends feed
+                hasFollowed: true,
+            };
+        });
+        res.status(200).json({ status: true, data: finalData });
     } catch (error) {
         console.error('Get feed posts error:', error);
         res.status(500).json({ message: 'Server error' });
