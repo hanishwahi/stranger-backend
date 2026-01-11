@@ -19,8 +19,6 @@ const userSchema = new mongoose.Schema(
 
         phone: {
             type: String,
-            required: true,
-            unique: true,
         },
 
         password: {
@@ -82,7 +80,9 @@ const userSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
-
+        profile_img: {
+            type: String
+        },
         followers: [
             {
                 type: mongoose.Schema.Types.ObjectId,

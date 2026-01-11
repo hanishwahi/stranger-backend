@@ -3,6 +3,7 @@ const connectDB = require('./config/db');
 const userRouter = require('./routes/user');
 const cors = require('cors');
 const postRouter = require('./routes/post/posts');
+const profileRouter = require('./routes/profile');
 require('dotenv').config();
 
 const app = express();
@@ -20,10 +21,9 @@ app.get('/', (req, res) => {
     res.send('Hello World');
 });
 
-app.use('/user', userRouter)
+app.use('/auth', userRouter)
+app.use('/profile', profileRouter)
 app.use('/post', postRouter)
-
-
 
 
 app.listen(PORT, () => {

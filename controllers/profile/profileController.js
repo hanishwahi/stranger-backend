@@ -73,3 +73,70 @@ exports.ExploreUsers = async (req, res) => {
     }
 };
 
+exports.updateProfileController = async (req, res) => {
+    try {
+        const userId = req.user.id; // from auth middleware 
+        const {
+            email,
+            phone,
+            profileType,
+            gender,
+            hobby,
+            bio,
+            city,
+            interested_in,
+            height,
+            isActive,
+            profile_img
+        } = req.body || {}
+
+        // 1️⃣ Allowed fields only (prevents unwanted updates)
+        const updateFields = {};
+        if (email) updateFields.email = email;
+        if (phone) updateFields.phone = phone;
+        if (profileType) updateFields.profileType = profileType;
+        if (gender) updateFields.gender = gender;
+        if (hobby) updateFields.hobby = hobby;
+        if (bio) updateFields.bio = bio;
+        if (city) updateFields.city = city;
+        if (interested_in) updateFields.interested_in = interested_in;
+        if (height) updateFields.height = height;
+        if (isActive) updateFields.isActive = isActive;
+        if (profile_img) updateFields.profile_img = profile_img;
+
+        // 2️⃣ Check email uniqueness (if email update requested)
+        if (email) {
+            const existingUser = await User.findOne({
+                email,
+                _id: { $ne: userId }
+            });
+
+            if (existingUser) {
+                return res.status(409).json({ message: 'Email already in use' });
+            }
+        }
+        console.log("updateFields", updateFields);
+
+        // 3️⃣ Update user
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { $set: updateFields },
+            { new: true, runValidators: true }
+        ).select('-password');
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // 4️⃣ Success response
+        res.status(200).json({
+            message: 'Profile updated successfully',
+            status: true,
+            user: updatedUser
+        });
+
+    } catch (error) {
+        console.error('Update profile error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};

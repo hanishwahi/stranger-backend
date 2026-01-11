@@ -4,10 +4,10 @@ const jwt = require('jsonwebtoken');
 
 exports.signupController = async (req, res) => {
     try {
-        const { username, email, phone, password, gender, interested_in, dob, bio, city, hobby, height, } = req.body;
+        const { username, email, password, gender, dob } = req.body;
 
         // 1️⃣ Basic validation
-        if (!username || !email || !phone || !password || !gender || !dob) {
+        if (!username || !email || !password || !gender || !dob) {
             return res.status(400).json({ message: 'All required fields must be filled' });
         }
 
@@ -34,7 +34,7 @@ exports.signupController = async (req, res) => {
 
         // 6️⃣ Create user
         const user = await User.create({
-            username, email, phone, password: hashedPassword, gender, interested_in, dob, age, bio, city, hobby, height, isActive: true,
+            username, email, password: hashedPassword, gender, dob, age, isActive: true,
         });
 
         // 7️⃣ Success response
@@ -67,6 +67,13 @@ exports.loginController = async (req, res) => {
         if (!user) {
             return res.status(401).json({ message: 'Invalid username or password' });
         }
+        if (!user.isActive) {
+            await User.findByIdAndUpdate(
+                user._id,
+                { isActive: true },
+                { new: true }
+            );
+        }
 
 
         // 4️⃣ Compare password
@@ -97,6 +104,48 @@ exports.loginController = async (req, res) => {
 
     } catch (error) {
         console.error('Login error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+exports.changePasswordController = async (req, res) => {
+    try {
+        const userId = req.user.id; // comes from  middleware
+        const { oldPassword, newPassword, confirmPassword } = req.body;
+
+        // 1️⃣ Validate input
+        if (!oldPassword || !newPassword || !confirmPassword) {
+            return res.status(400).json({ message: 'All fields are required' });
+        }
+
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({ message: 'New password and confirm password do not match' });
+        }
+
+        // 2️⃣ Find the user and select password
+        const user = await User.findById(userId).select('+password');
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // 3️⃣ Compare old password
+        const isMatch = await bcrypt.compare(oldPassword, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Old password is incorrect' });
+        }
+
+        // 4️⃣ Hash new password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        // 5️⃣ Update password
+        user.password = hashedPassword;
+        await user.save();
+
+        res.status(200).json({ message: 'Password changed successfully', status: true });
+
+    } catch (error) {
+        console.error('Change password error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
