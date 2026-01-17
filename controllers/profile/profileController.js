@@ -49,16 +49,28 @@ exports.UserProfile = async (req, res) => {
 exports.ExploreUsers = async (req, res) => {
     try {
         const currentUserId = req.user.id;
-        const search = req.query.search?.toLowerCase();
+        const search = req.query.search?.trim();
 
         let filter = {
             _id: { $ne: currentUserId },
         };
 
-        if (search === "alpha") {
-            filter.gender = "male";
-        } else if (search === "baddie") {
-            filter.gender = "female";
+        if (search) {
+            const lowerSearch = search.toLowerCase();
+
+            if (lowerSearch === "alpha") {
+                filter.gender = "male";
+            } else if (lowerSearch === "baddie") {
+                filter.gender = "female";
+            } else {
+                const words = lowerSearch.split(/\s+/);
+                filter.$or = words.map(word => ({
+                    username: {
+                        $regex: word,
+                        $options: "i"
+                    }
+                }));
+            }
         }
 
         const users = await User.find(filter).select("-password");
@@ -67,16 +79,19 @@ exports.ExploreUsers = async (req, res) => {
             success: true,
             data: users,
         });
+
     } catch (error) {
         console.error("Error fetching explore users:", error);
         res.status(500).json({ message: "Server error" });
     }
 };
 
+
 exports.updateProfileController = async (req, res) => {
     try {
         const userId = req.user.id; // from auth middleware 
         const {
+            username,
             email,
             phone,
             profileType,
@@ -93,6 +108,7 @@ exports.updateProfileController = async (req, res) => {
         // 1️⃣ Allowed fields only (prevents unwanted updates)
         const updateFields = {};
         if (email) updateFields.email = email;
+        if (username) updateFields.username = username;
         if (phone) updateFields.phone = phone;
         if (profileType) updateFields.profileType = profileType;
         if (gender) updateFields.gender = gender;
@@ -115,7 +131,6 @@ exports.updateProfileController = async (req, res) => {
                 return res.status(409).json({ message: 'Email already in use' });
             }
         }
-        console.log("updateFields", updateFields);
 
         // 3️⃣ Update user
         const updatedUser = await User.findByIdAndUpdate(

@@ -36,7 +36,7 @@ const userSchema = new mongoose.Schema(
 
         interested_in: {
             type: String,
-            enum: ['male', 'female', 'both']
+            enum: ['boy', 'girl', 'both']
         },
 
         dob: {
@@ -60,7 +60,7 @@ const userSchema = new mongoose.Schema(
         },
 
         hobby: {
-            type: [String], // array of hobbies
+            type: String // array of hobbies
         },
         gallery: {
             type: [String], // array of gallery

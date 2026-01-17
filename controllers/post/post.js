@@ -261,3 +261,26 @@ exports.likePost = async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 };
+
+
+
+exports.getLikePostUsers = async (req, res) => {
+    try {
+        const { postId } = req.params;
+
+        const post = await Post.findById(postId)
+            .select("likes")
+            .populate("likes", "_id username profile_img");
+
+        if (!post) {
+            return res.status(404).json({ message: "Post not found" });
+        }
+
+        // ✅ Return ONLY likes array
+        res.status(200).json({ status: true, data: post.likes });
+
+    } catch (error) {
+        console.error("Get Like Users Error:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};

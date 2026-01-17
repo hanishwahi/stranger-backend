@@ -1,6 +1,6 @@
 const express = require("express");
 const authMiddleware = require("../../middlewares/authMiddlware");
-const { createPost, getPostByLoggedInUser, getSinglePostById, getPostsByUserId, getAllUsersPosts, getFeedFriendsPosts, likePost, deletePostById } = require("../../controllers/post/post");
+const { createPost, getPostByLoggedInUser, getSinglePostById, getPostsByUserId, getAllUsersPosts, getFeedFriendsPosts, likePost, deletePostById, getLikePostUsers } = require("../../controllers/post/post");
 
 const postRouter = express.Router();
 
@@ -21,6 +21,10 @@ postRouter.get('/:id', authMiddleware, getSinglePostById);
 // get any user posts list 
 postRouter.get('/list/:id', authMiddleware, getPostsByUserId);
 postRouter.patch('/like/:id', authMiddleware, likePost);
+
+
+//get post like users
+postRouter.get('/userLikes/:postId', authMiddleware, getLikePostUsers);
 
 
 
