@@ -62,9 +62,21 @@ const userSchema = new mongoose.Schema(
         hobby: {
             type: String // array of hobbies
         },
-        gallery: {
-            type: [String], // array of gallery
-        },
+        gallery: [
+            {
+                url: {
+                    type: String,
+                    required: true
+                },
+                isPrivate: {
+                    type: Boolean,
+                    default: false
+                },
+                createdAt: {
+                    type: Date,
+                    default: Date.now
+                }
+            }],
 
         height: {
             type: Number, // in cm

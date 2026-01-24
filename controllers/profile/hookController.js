@@ -1,4 +1,5 @@
 const User = require("../../models/user");
+const { sendNotification } = require("../../services/notification.service");
 
 exports.followUser = async (req, res) => {
     try {
@@ -8,6 +9,7 @@ exports.followUser = async (req, res) => {
         if (targetUserId === currentUserId) {
             return res.status(400).json({ message: "You cannot follow yourself" });
         }
+
 
         const targetUser = await User.findById(targetUserId);
         const currentUser = await User.findById(currentUserId);
@@ -52,13 +54,22 @@ exports.followUser = async (req, res) => {
             currentUserId,
             { $addToSet: { following: targetUserId } }
         );
+        if (User) {
+            await sendNotification({
+                receiver: targetUserId,
+                sender: currentUserId,
+                type: "FOLLOW",
+                message: "started following you"
+            });
 
-        res.json({
-            message:
-                targetUser.profileType === "private"
-                    ? "Followed successfully. 20 credits transferred & 10 tokens added."
-                    : "Followed successfully.",
-        });
+            res.json({
+                message:
+                    targetUser.profileType === "private"
+                        ? "Followed successfully. 20 credits transferred & 10 tokens added."
+                        : "Followed successfully.",
+            });
+        }
+
 
     } catch (error) {
         console.error(error);

@@ -1,6 +1,7 @@
 const { getDetailsFromToken } = require("../../helpers");
 const Post = require("../../models/posts");
 const User = require('../../models/user');
+const { sendNotification } = require("../../services/notification.service");
 
 exports.createPost = async (req, res) => {
     try {
@@ -242,6 +243,9 @@ exports.likePost = async (req, res) => {
             return res.status(404).json({ message: "Post not found" });
         }
 
+        console.log("postsssssss", post);
+
+
         // Check if user already liked the post
         const hasLiked = post.likes.includes(currentUserId);
 
@@ -251,9 +255,17 @@ exports.likePost = async (req, res) => {
             await post.save();
             return res.status(200).json({ message: "Post unliked successfully", likes: post.likes.length });
         } else {
-            // Add like
             post.likes.push(currentUserId);
             await post.save();
+            await sendNotification({
+                receiver: post.userId,        // ✅ post owner
+                sender: currentUserId,
+                type: "LIKE",
+                message: "liked your post",
+                meta: {
+                    postId: post._id
+                }
+            });
             return res.status(200).json({ message: "Post liked successfully", likes: post.likes.length });
         }
     } catch (error) {
@@ -284,3 +296,88 @@ exports.getLikePostUsers = async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 };
+
+
+exports.getMyGallery = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const user = await User.findById(userId)
+            .select("gallery")
+            .lean();
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.status(200).json({
+            status: true,
+            message: "Gallery fetched successfully",
+            gallery: user.gallery
+        });
+
+    } catch (error) {
+        console.error("Get my gallery error:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+
+
+exports.addGallery = async (req, res) => {
+    try {
+        const { url, isPrivate = false } = req.body;
+
+        if (!url) {
+            return res.status(400).json({ message: "Image URL is required" });
+        }
+
+        const user = await User.findByIdAndUpdate(
+            req.user.id,
+            {
+                $push: {
+                    gallery: {
+                        $each: [{
+                            url,
+                            isPrivate,
+                            createdAt: new Date()
+                        }],
+                        $position: 0   // 👈 newest first
+                    }
+                }
+            },
+            { new: true, runValidators: true }
+        );
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.status(200).json({
+            status: true,
+            message: "Gallery item added successfully",
+            gallery: user.gallery
+        });
+
+    } catch (error) {
+        console.error("Add gallery error:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+
+exports.deleteGalleryImage = async (req, res) => {
+    try {
+        await User.findByIdAndUpdate(
+            req.user.id,
+            { $pull: { gallery: { _id: req.params.galleryId } } },
+            { new: true }
+        );
+
+        res.json({ message: "Gallery image deleted successfully" });
+
+    } catch (error) {
+        res.status(500).json({ message: "Server error" });
+    }
+};
+

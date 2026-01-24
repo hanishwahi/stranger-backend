@@ -26,7 +26,4 @@ postRouter.patch('/like/:id', authMiddleware, likePost);
 //get post like users
 postRouter.get('/userLikes/:postId', authMiddleware, getLikePostUsers);
 
-
-
-
 module.exports = postRouter;

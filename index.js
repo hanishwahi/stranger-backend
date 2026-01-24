@@ -4,6 +4,8 @@ const userRouter = require('./routes/user');
 const cors = require('cors');
 const postRouter = require('./routes/post/posts');
 const profileRouter = require('./routes/profile');
+const galleryRouter = require('./routes/gallery');
+const notificationRouter = require('./routes/NotificationRoutes');
 require('dotenv').config();
 
 const app = express();
@@ -24,6 +26,10 @@ app.get('/', (req, res) => {
 app.use('/auth', userRouter)
 app.use('/profile', profileRouter)
 app.use('/post', postRouter)
+app.use('/moments', galleryRouter)
+app.use('/notifications', notificationRouter)
+
+
 
 
 app.listen(PORT, () => {
